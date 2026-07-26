@@ -801,6 +801,103 @@ tbody tr:hover{background:rgba(41,128,185,0.03);}
     </div>
   </div>
 
+  <div class="page" id="page-facturation">
+    <div class="page-title">Facturation <span>clients</span></div>
+    <div class="page-sub">Créez et générez des factures pour vos clients — distinct des devis.</div>
+    <div style="display:grid;grid-template-columns:1fr 320px;gap:20px;align-items:start;">
+      <div>
+        <div class="card">
+          <div class="card-hdr"><div class="card-hdr-title">🏢 Informations émetteur</div></div>
+          <div class="card-body">
+            <div class="field-row-2">
+              <div class="field"><label>Société</label><input id="fact-em-societe" value="Dog Dépannage"></div>
+              <div class="field"><label>Adresse</label><input id="fact-em-adresse" value="33 rue du général de gaulle, Perrytonia"></div>
+            </div>
+            <div class="field-row-2">
+              <div class="field"><label>Téléphone</label><input id="fact-em-tel" value="06.21.17.15.53"></div>
+              <div class="field"><label>Email</label><input id="fact-em-email" value="dog-depannage237@a4l.pro"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-hdr"><div class="card-hdr-title">👤 Client</div></div>
+          <div class="card-body">
+            <div class="field-row-2">
+              <div class="field"><label>Nom / Société *</label><input id="fact-cl-nom" placeholder="Ex : Midnight Event's"></div>
+              <div class="field"><label>Adresse</label><input id="fact-cl-adresse" placeholder="Non communiqué"></div>
+            </div>
+            <div class="field-row-2">
+              <div class="field"><label>Téléphone</label><input id="fact-cl-tel" placeholder="Non communiqué"></div>
+              <div class="field"><label>Email</label><input id="fact-cl-email" placeholder="Non communiqué"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-hdr"><div class="card-hdr-title">🧾 Informations de la facture</div></div>
+          <div class="card-body">
+            <div class="field-row-3">
+              <div class="field"><label>Date de facture</label><input id="fact-date" type="date"></div>
+              <div class="field"><label>Numéro de facture</label><input id="fact-numero" disabled></div>
+              <div class="field"><label>Date de la prestation</label><input id="fact-date-evt" type="date"></div>
+            </div>
+            <div class="field"><label>Objet / Description de la prestation</label><input id="fact-objet" placeholder="Ex : Dépannage véhicule, remorquage…"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-hdr">
+            <div class="card-hdr-title">🔧 Prestations</div>
+            <button class="btn btn-ghost btn-sm" onclick="ajouterLigneFacture()">+ Ajouter une ligne</button>
+          </div>
+          <div class="card-body" id="fact-lignes-container"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-hdr"><div class="card-hdr-title">📄 Conditions de règlement</div></div>
+          <div class="card-body">
+            <div class="field"><label>Délai de paiement</label><input id="fact-validite" value="Paiement à réception de la facture."></div>
+            <div class="field"><label>Pénalités de retard</label><input id="fact-delai" value="En cas de retard, pénalités applicables selon la réglementation en vigueur."></div>
+            <div class="field"><label>Modalités de paiement</label><input id="fact-modalites" value="Solde intégral dû à réception."></div>
+            <div class="field"><label>Mode de paiement accepté</label><input id="fact-mode-paiement" value="Virement bancaire / Espèces."></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <div class="card-hdr"><div class="card-hdr-title">📊 Récapitulatif</div></div>
+          <div class="card-body">
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);padding:6px 0;">Total HT <span id="fact-total-ht" style="color:#fff;font-weight:700;">0,00 €</span></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--text2);padding:6px 0;">
+              TVA
+              <span style="display:flex;gap:4px;">
+                <button class="btn btn-sm fact-tva-btn btn-ghost" data-taux="0" onclick="setFactureTva(0)">0%</button>
+                <button class="btn btn-sm fact-tva-btn btn-ghost" data-taux="10" onclick="setFactureTva(10)">10%</button>
+                <button class="btn btn-sm fact-tva-btn btn-primary" data-taux="20" onclick="setFactureTva(20)">20%</button>
+              </span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);padding:6px 0;">Montant TVA <span id="fact-montant-tva" style="color:#fff;">(20%) 0,00 €</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:800;color:#fff;padding:10px 0 0;border-top:1px solid var(--border);margin-top:6px;">TOTAL TTC <span id="fact-total-ttc" style="color:#F0A840;">0,00 €</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-hdr"><div class="card-hdr-title">⚡ Actions</div></div>
+          <div class="card-body" style="display:flex;flex-direction:column;gap:8px;">
+            <button class="btn btn-primary btn-full" onclick="apercuFacture()">👁 Aperçu &amp; Impression</button>
+            <button class="btn btn-ghost btn-full" onclick="sauvegarderFacture()">💾 Sauvegarder dans l'historique</button>
+            <button class="btn btn-danger btn-full" onclick="nouvelleFacture()">🔄 Nouvelle facture</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-hdr"><div class="card-hdr-title">📚 Factures récentes</div></div>
+          <div class="card-body" id="fact-history"><div class="empty"><p>Chargement…</p></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="page" id="page-hierarchie">
     <div class="page-title">Hiérarchie <span>du service</span></div>
     <div class="page-sub">Organisation actuelle de l'équipe de dépannage.</div>
@@ -1243,6 +1340,8 @@ const JOURNAL_TYPES = {
   entretien_maj:        {color:"#C8A0E8", label:"Candidature"},
   devis_enregistre:     {color:"#2980B9", label:"Devis"},
   devis_supprime:       {color:"#F08080", label:"Devis"},
+  facture_enregistree:  {color:"#D35400", label:"Facturation"},
+  facture_supprimee:    {color:"#F08080", label:"Facturation"},
   absence_nouvelle:     {color:"#F0A840", label:"Absence"},
   absence_statut:       {color:"#F0A840", label:"Absence"},
   absence_suppr:        {color:"#F08080", label:"Absence"},
@@ -2262,6 +2361,376 @@ async function supprimerDevis(id) {
   } catch(e) { toast("Erreur : "+e.message,"#E74C3C"); }
 }
 
+// ─── FACTURATION CLIENTS (distincte des devis) ──────────────────────
+const TARIF_CATALOGUE = [
+  {nom:"Frais de déplacement", prix:50},
+  {nom:"Frais de remorquage VL", prix:100},
+  {nom:"Frais de remorquage PL", prix:150},
+  {nom:"Ouverture de véhicule", prix:30},
+  {nom:"Jerrican de Carburant", prix:80},
+  {nom:"Roue de secours", prix:150},
+  {nom:"Moteur", prix:200},
+  {nom:"Portières", prix:175},
+  {nom:"Réservoir", prix:200},
+  {nom:"Phares", prix:100},
+  {nom:"Batterie 12V", prix:125},
+  {nom:"Vitres", prix:100},
+  {nom:"Contrôle technique", prix:2400},
+];
+let factureLignes = [{designation:"", prix:0, quantite:1}];
+let factureTvaTaux = 20;
+let currentFactureId = null;
+
+async function initFacturationPage() {
+  await nouvelleFacture(false);
+  loadFactureHistory();
+}
+
+async function nouvelleFacture(confirmFirst) {
+  if(confirmFirst===undefined) confirmFirst = true;
+  if(confirmFirst && !confirm("Repartir sur une facture vierge ? Les modifications non sauvegardées seront perdues.")) return;
+  currentFactureId = null;
+  factureLignes = [{designation:"", prix:0, quantite:1}];
+  document.getElementById("fact-cl-nom").value = "";
+  document.getElementById("fact-cl-adresse").value = "";
+  document.getElementById("fact-cl-tel").value = "";
+  document.getElementById("fact-cl-email").value = "";
+  document.getElementById("fact-date").value = todayISO();
+  document.getElementById("fact-date-evt").value = "";
+  document.getElementById("fact-objet").value = "";
+  document.getElementById("fact-validite").value = "Paiement à réception de la facture.";
+  document.getElementById("fact-delai").value = "En cas de retard, pénalités applicables selon la réglementation en vigueur.";
+  document.getElementById("fact-modalites").value = "Solde intégral dû à réception.";
+  document.getElementById("fact-mode-paiement").value = "Virement bancaire / Espèces.";
+  document.getElementById("fact-numero").value = await nextFactureNumero();
+  setFactureTva(20);
+  renderFactureLignes();
+}
+
+async function nextFactureNumero() {
+  const year = new Date().getFullYear();
+  try {
+    const rows = await sb(`factures?select=numero`);
+    const count = (rows||[]).filter(r=>r.numero && r.numero.includes("-"+year+"-")).length;
+    return `FA-${year}-${String(count+1).padStart(3,"0")}`;
+  } catch(e) { return `FA-${year}-001`; }
+}
+
+function renderFactureLignes() {
+  const el = document.getElementById("fact-lignes-container");
+  if(!el) return;
+  el.innerHTML = factureLignes.map((l,i)=>{
+    const isCatalogue = TARIF_CATALOGUE.some(t=>t.nom===l.designation);
+    const sousTotal = l.prix*l.quantite;
+    const totalTTC = sousTotal*(1+factureTvaTaux/100);
+    return `
+    <div style="border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px;position:relative;">
+      ${factureLignes.length>1 ? `<button class="btn btn-danger btn-sm" style="position:absolute;top:10px;right:10px;padding:3px 8px;" onclick="supprimerLigneFacture(${i})">✕</button>`:""}
+      <div class="field">
+        <label>Prestation</label>
+        <select onchange="selectFacturePrestation(${i}, this.value)">
+          <option value="" ${!isCatalogue?"selected":""}>— Personnalisée —</option>
+          ${TARIF_CATALOGUE.map(t=>`<option value="${esc(t.nom)}" ${l.designation===t.nom?"selected":""}>${esc(t.nom)} (${fmtEuro(t.prix)})</option>`).join("")}
+        </select>
+      </div>
+      ${!isCatalogue ? `<div class="field"><label>Désignation personnalisée</label><input value="${esc(l.designation)}" oninput="updateFactureLigne(${i},'designation',this.value)" placeholder="Ex : Intervention spécifique"></div>` : ""}
+      <div class="field-row-2">
+        <div class="field"><label>Prix unitaire HT</label><input type="number" min="0" step="0.01" value="${l.prix}" oninput="updateFactureLigne(${i},'prix',this.value)"></div>
+        <div class="field"><label>Quantité</label><input type="number" min="1" step="1" value="${l.quantite}" oninput="updateFactureLigne(${i},'quantite',this.value)"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-top:6px;">
+        <span>Sous-total HT : <strong id="fact-ligne-ht-${i}" style="color:#fff;">${fmtEuro(sousTotal)}</strong></span>
+        <span>Total TTC : <strong id="fact-ligne-ttc-${i}" style="color:#F0A840;">${fmtEuro(totalTTC)}</strong></span>
+      </div>
+    </div>`;
+  }).join("");
+  recomputeFactureTotals();
+}
+function selectFacturePrestation(i, nom) {
+  if(!factureLignes[i]) return;
+  const item = TARIF_CATALOGUE.find(t=>t.nom===nom);
+  factureLignes[i].designation = nom;
+  if(item) factureLignes[i].prix = item.prix;
+  renderFactureLignes();
+}
+function ajouterLigneFacture() {
+  factureLignes.push({designation:"", prix:0, quantite:1});
+  renderFactureLignes();
+}
+function supprimerLigneFacture(i) {
+  factureLignes.splice(i,1);
+  renderFactureLignes();
+}
+function updateFactureLigne(i, field, value) {
+  if(!factureLignes[i]) return;
+  factureLignes[i][field] = (field==="designation") ? value : (parseFloat(value)||0);
+  const htEl = document.getElementById("fact-ligne-ht-"+i);
+  const ttcEl = document.getElementById("fact-ligne-ttc-"+i);
+  const sousTotal = factureLignes[i].prix*factureLignes[i].quantite;
+  if(htEl) htEl.textContent = fmtEuro(sousTotal);
+  if(ttcEl) ttcEl.textContent = fmtEuro(sousTotal*(1+factureTvaTaux/100));
+  recomputeFactureTotals();
+}
+function setFactureTva(taux) {
+  factureTvaTaux = taux;
+  document.querySelectorAll(".fact-tva-btn").forEach(b=>{
+    const isActive = parseInt(b.dataset.taux)===taux;
+    b.classList.toggle("btn-primary", isActive);
+    b.classList.toggle("btn-ghost", !isActive);
+  });
+  renderFactureLignes();
+}
+function calculerFactureTotaux() {
+  const totalHT = factureLignes.reduce((s,l)=>s+(l.prix*l.quantite),0);
+  const montantTva = totalHT*factureTvaTaux/100;
+  const totalTTC = totalHT+montantTva;
+  return {totalHT, montantTva, totalTTC};
+}
+function recomputeFactureTotals() {
+  const {totalHT, montantTva, totalTTC} = calculerFactureTotaux();
+  const elHT = document.getElementById("fact-total-ht");
+  const elTva = document.getElementById("fact-montant-tva");
+  const elTTC = document.getElementById("fact-total-ttc");
+  if(elHT) elHT.textContent = fmtEuro(totalHT);
+  if(elTva) elTva.textContent = `(${factureTvaTaux}%) `+fmtEuro(montantTva);
+  if(elTTC) elTTC.textContent = fmtEuro(totalTTC);
+}
+
+function collectFactureData() {
+  const {totalHT, montantTva, totalTTC} = calculerFactureTotaux();
+  return {
+    numero: document.getElementById("fact-numero").value,
+    em_societe: document.getElementById("fact-em-societe").value.trim(),
+    em_adresse: document.getElementById("fact-em-adresse").value.trim(),
+    em_tel: document.getElementById("fact-em-tel").value.trim(),
+    em_email: document.getElementById("fact-em-email").value.trim(),
+    client_nom: document.getElementById("fact-cl-nom").value.trim(),
+    client_adresse: document.getElementById("fact-cl-adresse").value.trim(),
+    client_telephone: document.getElementById("fact-cl-tel").value.trim(),
+    client_email: document.getElementById("fact-cl-email").value.trim(),
+    date_facture: document.getElementById("fact-date").value || todayISO(),
+    date_prestation: document.getElementById("fact-date-evt").value || null,
+    objet: document.getElementById("fact-objet").value.trim(),
+    lignes: factureLignes,
+    tva_taux: factureTvaTaux,
+    total_ht: totalHT, montant_tva: montantTva, total_ttc: totalTTC,
+    validite: document.getElementById("fact-validite").value.trim(),
+    delai: document.getElementById("fact-delai").value.trim(),
+    modalites: document.getElementById("fact-modalites").value.trim(),
+    mode_paiement: document.getElementById("fact-mode-paiement").value.trim(),
+  };
+}
+
+async function sauvegarderFacture() {
+  const data = collectFactureData();
+  if(!data.client_nom) { toast("Merci d'indiquer le nom / société du client.","#E74C3C"); return; }
+  try {
+    const payload = {...data, auteur: identityLabel()};
+    let r;
+    if(currentFactureId) {
+      r = await fetch(SB_URL+"/rest/v1/factures?id=eq."+currentFactureId, {method:"PATCH", headers:{...H,"Prefer":"return=minimal"}, mode:"cors", body:JSON.stringify(payload)});
+    } else {
+      r = await fetch(SB_URL+"/rest/v1/factures", {method:"POST", headers:{...H,"Prefer":"return=representation"}, mode:"cors", body:JSON.stringify(payload)});
+    }
+    if(!r.ok) throw new Error(await r.text());
+    if(!currentFactureId) {
+      const created = await r.json();
+      currentFactureId = created && created[0] && created[0].id;
+    }
+    logActivity("facture_enregistree", `Facture ${data.numero} enregistrée pour ${data.client_nom} (HT ${fmtEuro(data.total_ht)} · TVA ${fmtEuro(data.montant_tva)} · TTC ${fmtEuro(data.total_ttc)})`);
+    toast("✓ Facture enregistrée : "+data.numero);
+    loadFactureHistory();
+  } catch(e) { toast("Erreur : "+e.message,"#E74C3C"); }
+}
+
+function buildFactureInner(d) {
+  const escHtml = s => (s||"").toString().replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  const dateFactureFr = d.date_facture ? new Date(d.date_facture+"T12:00:00").toLocaleDateString("fr-FR") : "—";
+  const datePrestationFr = d.date_prestation ? new Date(d.date_prestation+"T12:00:00").toLocaleDateString("fr-FR") : "—";
+  const lignesHTML = (d.lignes||[]).filter(l=>l.designation).map(l=>{
+    const sousTotal = l.prix*l.quantite;
+    const totalTTCLigne = sousTotal*(1+d.tva_taux/100);
+    return `
+    <tr>
+      <td style="padding:8px 7px;border-bottom:1px solid #eee;">${escHtml(l.designation)}</td>
+      <td style="padding:8px 7px;border-bottom:1px solid #eee;text-align:right;">${fmtEuro(l.prix)}</td>
+      <td style="padding:8px 7px;border-bottom:1px solid #eee;text-align:center;">${l.quantite}</td>
+      <td style="padding:8px 7px;border-bottom:1px solid #eee;text-align:right;">${fmtEuro(sousTotal)}</td>
+      <td style="padding:8px 7px;border-bottom:1px solid #eee;text-align:center;">${d.tva_taux}%</td>
+      <td style="padding:8px 7px;border-bottom:1px solid #eee;text-align:right;font-weight:700;">${fmtEuro(totalTTCLigne)}</td>
+    </tr>`;
+  }).join("");
+
+  const css = `
+.fact-page{width:700px;background:#fff;padding:40px 40px 50px;font-family:'Segoe UI',Arial,sans-serif;color:#1a1a1a;}
+.fact-titlebar{background:#D35400;color:#fff;font-weight:800;font-size:16px;letter-spacing:0.03em;padding:14px 18px;border-radius:2px;margin-bottom:20px;text-align:center;}
+.fact-emetteur{font-size:12px;color:#333;line-height:1.7;margin-bottom:20px;}
+.fact-emetteur .nom{font-weight:800;font-size:14px;}
+.fact-infobox-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;}
+.fact-infobox{background:#fdf3ea;border-left:3px solid #D35400;border-radius:0 6px 6px 0;padding:12px 14px;}
+.fact-infobox.client{border-left-color:#7D3C98;background:#f5f7fa;}
+.fact-infobox .titre{font-size:11px;font-weight:800;color:#D35400;text-transform:uppercase;margin-bottom:6px;}
+.fact-infobox.client .titre{color:#7D3C98;}
+.fact-infobox .ligne{font-size:11.5px;color:#333;margin-bottom:2px;}
+.fact-section-title{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.04em;color:#1a1a1a;margin:18px 0 8px;}
+.fact-table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:10.5px;}
+.fact-table th, .fact-table td{word-wrap:break-word;overflow-wrap:break-word;}
+.fact-table thead th{background:#fdf3ea;padding:8px 7px;text-align:left;font-size:9px;text-transform:uppercase;color:#8a5a2a;letter-spacing:0.01em;}
+.fact-totaux{margin-top:10px;width:280px;margin-left:auto;font-size:12px;}
+.fact-totaux .row{display:flex;justify-content:space-between;padding:5px 0;color:#444;}
+.fact-totaux .ttc{font-weight:800;font-size:14px;color:#1a1a1a;background:#fdf0e3;padding:9px 10px;border-radius:6px;margin-top:6px;border:1px solid #D35400;}
+.fact-cgv{font-size:11px;color:#444;line-height:1.9;margin-top:18px;}
+.fact-signature{margin-top:40px;font-size:11px;color:#444;display:flex;justify-content:flex-end;text-align:right;}
+.fact-signature .box{width:220px;}
+.fact-footer{margin-top:30px;font-size:9px;color:#999;text-align:center;}
+`;
+  const html = `<div class="fact-page">
+    <div class="fact-titlebar">FACTURE</div>
+    <div class="fact-emetteur">
+      <div class="nom">${escHtml(d.em_societe)}</div>
+      Adresse : ${escHtml(d.em_adresse)}<br>
+      Téléphone : ${escHtml(d.em_tel)}<br>
+      Email : ${escHtml(d.em_email)}
+    </div>
+    <div class="fact-infobox-grid">
+      <div class="fact-infobox client">
+        <div class="titre">Client</div>
+        <div class="ligne"><strong>Nom / Société :</strong> ${escHtml(d.client_nom)}</div>
+        <div class="ligne">Adresse : ${escHtml(d.client_adresse)||"Non communiqué"}</div>
+        <div class="ligne">Téléphone : ${escHtml(d.client_telephone)||"Non communiqué"}</div>
+        <div class="ligne">Email : ${escHtml(d.client_email)||"Non communiqué"}</div>
+      </div>
+      <div class="fact-infobox">
+        <div class="titre">Informations</div>
+        <div class="ligne">Date de facture : ${dateFactureFr}</div>
+        <div class="ligne">Numéro de facture : ${escHtml(d.numero)}</div>
+        <div class="ligne">Date de la prestation : ${datePrestationFr}</div>
+        <div class="ligne">Objet : ${escHtml(d.objet)||"—"}</div>
+      </div>
+    </div>
+    <div class="fact-section-title">Détail de la prestation</div>
+    <table class="fact-table">
+      <thead><tr>
+        <th style="width:28%;">Prestation</th>
+        <th style="width:16%;text-align:right;">Prix unitaire HT</th>
+        <th style="width:12%;text-align:center;">Quantité</th>
+        <th style="width:16%;text-align:right;">Sous-total HT</th>
+        <th style="width:12%;text-align:center;">TVA</th>
+        <th style="width:16%;text-align:right;">Total TTC</th>
+      </tr></thead>
+      <tbody>${lignesHTML}</tbody>
+    </table>
+    <div class="fact-totaux">
+      <div class="row"><span>Total HT</span><span>${fmtEuro(d.total_ht)}</span></div>
+      <div class="row"><span>TVA (${d.tva_taux}%)</span><span>${fmtEuro(d.montant_tva)}</span></div>
+      <div class="row ttc"><span>Total TTC (net à payer)</span><span>${fmtEuro(d.total_ttc)}</span></div>
+    </div>
+    <div class="fact-section-title">Conditions de règlement</div>
+    <div class="fact-cgv">
+      - Délai de paiement : ${escHtml(d.validite)}<br>
+      - Pénalités de retard : ${escHtml(d.delai)}<br>
+      - Modalités de paiement : ${escHtml(d.modalites)}<br>
+      - Mode de paiement accepté : ${escHtml(d.mode_paiement)}
+    </div>
+    <div class="fact-signature">
+      <div class="box">
+        Cachet et signature :<br><br><br><br>
+        <div style="border-top:1px solid #999;padding-top:4px;">Dog Dépannage</div>
+      </div>
+    </div>
+    <div class="fact-footer">${escHtml(d.numero)} — Dog Compagnie — Facture générée le ${new Date().toLocaleDateString("fr-FR")}</div>
+  </div>`;
+  return {css, html};
+}
+
+async function renderFactureAsJPEG(data) {
+  if(typeof html2canvas==="undefined") throw new Error("Le module de génération d'image n'a pas pu se charger.");
+  const {css, html} = buildFactureInner(data);
+  const zone = document.getElementById("doc-render-zone");
+  zone.innerHTML = `<style>${css}</style>${html}`;
+  await new Promise(r=>setTimeout(r,60));
+  const target = zone.querySelector(".fact-page");
+  const canvas = await html2canvas(target, {scale:2, backgroundColor:"#ffffff", useCORS:true});
+  zone.innerHTML = "";
+  return await new Promise(resolve=>{
+    canvas.toBlob(blob=>resolve(URL.createObjectURL(blob)), "image/jpeg", 0.95);
+  });
+}
+
+async function apercuFacture() {
+  const data = collectFactureData();
+  if(!data.client_nom) { toast("Merci d'indiquer le nom / société du client.","#E74C3C"); return; }
+  toast("⏳ Génération de l'aperçu…","#5D8AA8");
+  try {
+    const url = await renderFactureAsJPEG(data);
+    showDocPreview(url, data.numero);
+  } catch(e) { toast("Erreur lors de la génération : "+e.message,"#E74C3C"); }
+}
+
+async function loadFactureHistory() {
+  const el = document.getElementById("fact-history");
+  try {
+    const rows = await sb("factures?select=*&order=created_at.desc&limit=50");
+    if(!el) return;
+    if(!rows.length) { el.innerHTML = '<div class="empty"><p>Aucune facture pour le moment.</p></div>'; return; }
+    el.innerHTML = rows.map(r=>`
+      <div class="log-item">
+        <div><div class="log-agent">${esc(r.numero)} — ${esc(r.client_nom)}</div><div class="log-dates">HT ${fmtEuro(r.total_ht)} · TVA ${fmtEuro(r.montant_tva)} · TTC ${fmtEuro(r.total_ttc)} · par ${esc(r.auteur||"—")}</div></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="btn btn-ghost btn-sm" onclick="chargerFacture('${r.id}')">📂 Charger</button>
+          <button class="btn btn-primary btn-sm" onclick="reprintFacture('${r.id}')">👁 Revoir</button>
+          <button class="btn btn-danger btn-sm" onclick="supprimerFacture('${r.id}')">🗑</button>
+        </div>
+      </div>`).join("");
+  } catch(e) { if(el) el.innerHTML = '<div class="empty"><p>Erreur de chargement.</p></div>'; }
+}
+async function chargerFacture(id) {
+  try {
+    const rows = await sb(`factures?id=eq.${id}&select=*`);
+    const d = rows && rows[0];
+    if(!d) return;
+    currentFactureId = d.id;
+    document.getElementById("fact-em-societe").value = d.em_societe||"";
+    document.getElementById("fact-em-adresse").value = d.em_adresse||"";
+    document.getElementById("fact-em-tel").value = d.em_tel||"";
+    document.getElementById("fact-em-email").value = d.em_email||"";
+    document.getElementById("fact-cl-nom").value = d.client_nom||"";
+    document.getElementById("fact-cl-adresse").value = d.client_adresse||"";
+    document.getElementById("fact-cl-tel").value = d.client_telephone||"";
+    document.getElementById("fact-cl-email").value = d.client_email||"";
+    document.getElementById("fact-date").value = d.date_facture||"";
+    document.getElementById("fact-numero").value = d.numero||"";
+    document.getElementById("fact-date-evt").value = d.date_prestation||"";
+    document.getElementById("fact-objet").value = d.objet||"";
+    document.getElementById("fact-validite").value = d.validite||"";
+    document.getElementById("fact-delai").value = d.delai||"";
+    document.getElementById("fact-modalites").value = d.modalites||"";
+    document.getElementById("fact-mode-paiement").value = d.mode_paiement||"";
+    factureLignes = (Array.isArray(d.lignes) && d.lignes.length) ? d.lignes : [{designation:"",prix:0,quantite:1}];
+    setFactureTva(d.tva_taux||20);
+    renderFactureLignes();
+    toast("✓ Facture chargée : "+d.numero);
+  } catch(e) { toast("Erreur : "+e.message,"#E74C3C"); }
+}
+async function reprintFacture(id) {
+  try {
+    const rows = await sb(`factures?id=eq.${id}&select=*`);
+    const d = rows && rows[0];
+    if(!d) return;
+    const url = await renderFactureAsJPEG(d);
+    showDocPreview(url, d.numero);
+  } catch(e) { toast("Erreur : "+e.message,"#E74C3C"); }
+}
+async function supprimerFacture(id) {
+  if(!confirm("Supprimer définitivement cette facture ?")) return;
+  try {
+    await sb(`factures?id=eq.${id}`,{method:"DELETE"});
+    logActivity("facture_supprimee","Facture supprimée");
+    toast("✓ Facture supprimée");
+    loadFactureHistory();
+  } catch(e) { toast("Erreur : "+e.message,"#E74C3C"); }
+}
+
 async function loadDocHistory(scope) {
   try {
     const rows = await sb("documents?select=*&order=created_at.desc&limit=100");
@@ -2436,7 +2905,7 @@ function renderJournal() {
   const statsEl = document.getElementById("journal-stats");
   const filterEl = document.getElementById("journal-filter-bar");
   if(!el) return;
-  const cats = ["Candidature","Absence","Intervention","Compte","Service","Alerte","Évaluation","Document","Devis"];
+  const cats = ["Candidature","Absence","Intervention","Compte","Service","Alerte","Évaluation","Document","Devis","Facturation"];
   if(statsEl) {
     statsEl.innerHTML = cats.map(cat=>{
       const n = allLogsJournal.filter(l=>journalMeta(l.type).label===cat).length;
@@ -2534,6 +3003,7 @@ const NAV_CONFIG = [
   {page:"evaluations",      icon:"🎯", label:"Évaluations dépanneurs",    roles:["responsable","pdg","admin"],                 section:"Gestion", badgeId:"nav-badge-eval"},
   {page:"doc-rh",           icon:"🗂️", label:"Documents RH",          roles:["responsable","pdg","admin"],                 section:"Gestion"},
   {page:"devis",            icon:"🧾", label:"Devis clients",         roles:["pdg","admin"],                               section:"Gestion"},
+  {page:"facturation",      icon:"💰", label:"Facturation",           roles:["agent","responsable","pdg","admin"],         section:"Gestion"},
   {page:"admin-comptes",    icon:"⚙️", label:"Gestion des comptes",   roles:["pdg","admin"],                       section:"Administration"},
   {page:"journal",          icon:"🗒️", label:"Journal d'activité",    roles:["admin"],                             section:"Administration"},
   {page:"candidature-form", icon:"📝", label:"Candidater au service", roles:["candidat"],                          section:""},
@@ -2590,6 +3060,7 @@ function goPage(pageId) {
     if(cdgTab) cdgTab.style.display = isComiteDirection() ? "inline-flex" : "none";
   }
   if(pageId==="devis")             initDevisPage();
+  if(pageId==="facturation")       initFacturationPage();
   if(pageId==="incident")          { prefillDocDates(); loadDocHistory("incident"); }
   if(pageId==="mon-service")       initServicePage();
   if(pageId==="absence-form") {
