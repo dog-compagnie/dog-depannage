@@ -821,20 +821,6 @@ tbody tr:hover{background:rgba(41,128,185,0.03);}
         </div>
 
         <div class="card">
-          <div class="card-hdr"><div class="card-hdr-title">👤 Client</div></div>
-          <div class="card-body">
-            <div class="field-row-2">
-              <div class="field"><label>Nom / Société *</label><input id="fact-cl-nom" placeholder="Ex : Midnight Event's"></div>
-              <div class="field"><label>Adresse</label><input id="fact-cl-adresse" placeholder="Non communiqué"></div>
-            </div>
-            <div class="field-row-2">
-              <div class="field"><label>Téléphone</label><input id="fact-cl-tel" placeholder="Non communiqué"></div>
-              <div class="field"><label>Email</label><input id="fact-cl-email" placeholder="Non communiqué"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="card">
           <div class="card-hdr"><div class="card-hdr-title">🧾 Informations de la facture</div></div>
           <div class="card-body">
             <div class="field-row-3">
@@ -2391,10 +2377,6 @@ async function nouvelleFacture(confirmFirst) {
   if(confirmFirst && !confirm("Repartir sur une facture vierge ? Les modifications non sauvegardées seront perdues.")) return;
   currentFactureId = null;
   factureLignes = [{designation:"", prix:0, quantite:1}];
-  document.getElementById("fact-cl-nom").value = "";
-  document.getElementById("fact-cl-adresse").value = "";
-  document.getElementById("fact-cl-tel").value = "";
-  document.getElementById("fact-cl-email").value = "";
   document.getElementById("fact-date").value = todayISO();
   document.getElementById("fact-date-evt").value = "";
   document.getElementById("fact-objet").value = "";
@@ -2504,10 +2486,6 @@ function collectFactureData() {
     em_adresse: document.getElementById("fact-em-adresse").value.trim(),
     em_tel: document.getElementById("fact-em-tel").value.trim(),
     em_email: document.getElementById("fact-em-email").value.trim(),
-    client_nom: document.getElementById("fact-cl-nom").value.trim(),
-    client_adresse: document.getElementById("fact-cl-adresse").value.trim(),
-    client_telephone: document.getElementById("fact-cl-tel").value.trim(),
-    client_email: document.getElementById("fact-cl-email").value.trim(),
     date_facture: document.getElementById("fact-date").value || todayISO(),
     date_prestation: document.getElementById("fact-date-evt").value || null,
     objet: document.getElementById("fact-objet").value.trim(),
@@ -2523,7 +2501,7 @@ function collectFactureData() {
 
 async function sauvegarderFacture() {
   const data = collectFactureData();
-  if(!data.client_nom) { toast("Merci d'indiquer le nom / société du client.","#E74C3C"); return; }
+  if(!(data.lignes||[]).some(l=>l.designation)) { toast("Merci d'ajouter au moins une prestation.","#E74C3C"); return; }
   try {
     const payload = {...data, auteur: identityLabel()};
     let r;
@@ -2537,7 +2515,7 @@ async function sauvegarderFacture() {
       const created = await r.json();
       currentFactureId = created && created[0] && created[0].id;
     }
-    logActivity("facture_enregistree", `Facture ${data.numero} enregistrée pour ${data.client_nom} (HT ${fmtEuro(data.total_ht)} · TVA ${fmtEuro(data.montant_tva)} · TTC ${fmtEuro(data.total_ttc)})`);
+    logActivity("facture_enregistree", `Facture ${data.numero} enregistrée (HT ${fmtEuro(data.total_ht)} · TVA ${fmtEuro(data.montant_tva)} · TTC ${fmtEuro(data.total_ttc)})`);
     toast("✓ Facture enregistrée : "+data.numero);
     loadFactureHistory();
   } catch(e) { toast("Erreur : "+e.message,"#E74C3C"); }
@@ -2592,14 +2570,7 @@ function buildFactureInner(d) {
       Téléphone : ${escHtml(d.em_tel)}<br>
       Email : ${escHtml(d.em_email)}
     </div>
-    <div class="fact-infobox-grid">
-      <div class="fact-infobox client">
-        <div class="titre">Client</div>
-        <div class="ligne"><strong>Nom / Société :</strong> ${escHtml(d.client_nom)}</div>
-        <div class="ligne">Adresse : ${escHtml(d.client_adresse)||"Non communiqué"}</div>
-        <div class="ligne">Téléphone : ${escHtml(d.client_telephone)||"Non communiqué"}</div>
-        <div class="ligne">Email : ${escHtml(d.client_email)||"Non communiqué"}</div>
-      </div>
+    <div class="fact-infobox-grid" style="grid-template-columns:1fr;">
       <div class="fact-infobox">
         <div class="titre">Informations</div>
         <div class="ligne">Date de facture : ${dateFactureFr}</div>
@@ -2659,7 +2630,7 @@ async function renderFactureAsJPEG(data) {
 
 async function apercuFacture() {
   const data = collectFactureData();
-  if(!data.client_nom) { toast("Merci d'indiquer le nom / société du client.","#E74C3C"); return; }
+  if(!(data.lignes||[]).some(l=>l.designation)) { toast("Merci d'ajouter au moins une prestation.","#E74C3C"); return; }
   toast("⏳ Génération de l'aperçu…","#5D8AA8");
   try {
     const url = await renderFactureAsJPEG(data);
@@ -2675,7 +2646,7 @@ async function loadFactureHistory() {
     if(!rows.length) { el.innerHTML = '<div class="empty"><p>Aucune facture pour le moment.</p></div>'; return; }
     el.innerHTML = rows.map(r=>`
       <div class="log-item">
-        <div><div class="log-agent">${esc(r.numero)} — ${esc(r.client_nom)}</div><div class="log-dates">HT ${fmtEuro(r.total_ht)} · TVA ${fmtEuro(r.montant_tva)} · TTC ${fmtEuro(r.total_ttc)} · par ${esc(r.auteur||"—")}</div></div>
+        <div><div class="log-agent">${esc(r.numero)}${r.objet?" — "+esc(r.objet):""}</div><div class="log-dates">HT ${fmtEuro(r.total_ht)} · TVA ${fmtEuro(r.montant_tva)} · TTC ${fmtEuro(r.total_ttc)} · par ${esc(r.auteur||"—")}</div></div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
           <button class="btn btn-ghost btn-sm" onclick="chargerFacture('${r.id}')">📂 Charger</button>
           <button class="btn btn-primary btn-sm" onclick="reprintFacture('${r.id}')">👁 Revoir</button>
@@ -2694,10 +2665,6 @@ async function chargerFacture(id) {
     document.getElementById("fact-em-adresse").value = d.em_adresse||"";
     document.getElementById("fact-em-tel").value = d.em_tel||"";
     document.getElementById("fact-em-email").value = d.em_email||"";
-    document.getElementById("fact-cl-nom").value = d.client_nom||"";
-    document.getElementById("fact-cl-adresse").value = d.client_adresse||"";
-    document.getElementById("fact-cl-tel").value = d.client_telephone||"";
-    document.getElementById("fact-cl-email").value = d.client_email||"";
     document.getElementById("fact-date").value = d.date_facture||"";
     document.getElementById("fact-numero").value = d.numero||"";
     document.getElementById("fact-date-evt").value = d.date_prestation||"";
