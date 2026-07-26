@@ -546,7 +546,7 @@ tbody tr:hover{background:rgba(41,128,185,0.03);}
   <!-- PAGE ABSENCES (gestion) -->
   <div class="page" id="page-absences-gestion">
     <div class="page-title">Gestion des <span>absences</span></div>
-    <div class="page-sub">Toutes les déclarations d'absence soumises par les agents.</div>
+    <div class="page-sub">Toutes les déclarations d'absence soumises par les dépanneurs.</div>
     <div class="stats-bar" id="absence-stats"></div>
     <div id="absences-list"></div>
   </div>
@@ -644,7 +644,7 @@ tbody tr:hover{background:rgba(41,128,185,0.03);}
   <!-- PAGE LOGS DE SERVICE (PDG + Responsable) -->
   <div class="page" id="page-logs-service">
     <div class="page-title">Logs de <span>service</span></div>
-    <div class="page-sub">Historique complet des prises et fins de service de tous les agents.</div>
+    <div class="page-sub">Historique complet des prises et fins de service de tous les dépanneurs.</div>
     <div class="stats-bar" id="logs-stats"></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center;" id="logs-sort-bar"></div>
     <div class="card">
@@ -1395,7 +1395,6 @@ const EVAL_CRITERES = [
   {cat:"Techniques d'intervention", nom:"Gestion proportionnée d'un conflit sur le terrain", max:6, elim:true},
   {cat:"Techniques d'intervention", nom:"Connaissance et respect des zones de compétence", max:3, elim:false},
   {cat:"Techniques d'intervention", nom:"Conduite de la dépanneuse — protocoles hors urgence", max:4, elim:false},
-  {cat:"Techniques d'intervention", nom:"Conduite de la dépanneuse — protocoles en urgence", max:5, elim:true},
   {cat:"Communication & commandement", nom:"Clarté et précision des transmissions radio", max:4, elim:false},
   {cat:"Communication & commandement", nom:"Utilisation du langage radio réglementaire", max:3, elim:false},
   {cat:"Communication & commandement", nom:"Coordination avec les équipes partenaires", max:4, elim:false},
@@ -1527,7 +1526,7 @@ function renderEvalHistory(rows) {
     window._evalSort = window._evalSort||"date";
     sortEl.innerHTML = `
       <button class="btn btn-sm ${window._evalSort==="date"?"btn-primary":"btn-ghost"}" onclick="setEvalSort('date')">📅 Par date</button>
-      <button class="btn btn-sm ${window._evalSort==="nom"?"btn-primary":"btn-ghost"}" onclick="setEvalSort('nom')">🔤 Par agent</button>`;
+      <button class="btn btn-sm ${window._evalSort==="nom"?"btn-primary":"btn-ghost"}" onclick="setEvalSort('nom')">🔤 Par dépanneur</button>`;
   }
   if(!el) return;
   if(!allEvals.length) { el.innerHTML = '<div class="empty"><p>Aucune évaluation enregistrée.</p></div>'; return; }
@@ -4284,7 +4283,7 @@ function renderLogs() {
     sortEl.innerHTML = `
       <span style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;align-self:center;">Trier :</span>
       <button class="btn btn-sm ${window._logsSort==="date"?"btn-primary":"btn-ghost"}" onclick="setLogsSort('date')">📅 Par date</button>
-      <button class="btn btn-sm ${window._logsSort==="nom"?"btn-primary":"btn-ghost"}" onclick="setLogsSort('nom')">🔤 Par nom d'agent</button>`;
+      <button class="btn btn-sm ${window._logsSort==="nom"?"btn-primary":"btn-ghost"}" onclick="setLogsSort('nom')">🔤 Par nom de dépanneur</button>`;
   }
 
   const canManage = (role==="responsable"||role==="pdg"||role==="admin");
