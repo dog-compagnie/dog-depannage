@@ -2523,6 +2523,9 @@ async function sauvegarderFacture() {
 
 function buildFactureInner(d) {
   const escHtml = s => (s||"").toString().replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  const auteur = identityLabel();
+  const auteurRole = specialRoleLabel();
+  const initials = auteur.split(" ").filter(Boolean).map(w=>w[0]).join("").toUpperCase().slice(0,3);
   const dateFactureFr = d.date_facture ? new Date(d.date_facture+"T12:00:00").toLocaleDateString("fr-FR") : "—";
   const datePrestationFr = d.date_prestation ? new Date(d.date_prestation+"T12:00:00").toLocaleDateString("fr-FR") : "—";
   const lignesHTML = (d.lignes||[]).filter(l=>l.designation).map(l=>{
@@ -2558,9 +2561,13 @@ function buildFactureInner(d) {
 .fact-totaux .row{display:flex;justify-content:space-between;padding:5px 0;color:#444;}
 .fact-totaux .ttc{font-weight:800;font-size:14px;color:#1a1a1a;background:#fdf0e3;padding:9px 10px;border-radius:6px;margin-top:6px;border:1px solid #D35400;}
 .fact-cgv{font-size:11px;color:#444;line-height:1.9;margin-top:18px;}
-.fact-signature{margin-top:40px;font-size:11px;color:#444;display:flex;justify-content:flex-end;text-align:right;}
-.fact-signature .box{width:220px;}
-.fact-footer{margin-top:30px;font-size:9px;color:#999;text-align:center;}
+.fact-footer2{margin-top:50px;display:flex;justify-content:space-between;align-items:flex-end;font-size:12px;font-family:Georgia,'Times New Roman',serif;}
+.fact-signature2 .name{font-weight:800;color:#D35400;margin-top:26px;}
+.fact-signature2 .role{color:#666;font-size:11px;}
+.fact-stamp{border:2px solid #1a1a1a;padding:8px 14px;text-align:center;font-size:9px;font-family:Georgia,'Times New Roman',serif;}
+.fact-stamp .company{font-weight:800;font-size:10px;}
+.fact-stamp .initials{font-size:22px;font-weight:900;margin:6px 0;letter-spacing:2px;}
+.fact-footer{margin-top:20px;font-size:9px;color:#999;text-align:center;}
 `;
   const html = `<div class="fact-page">
     <div class="fact-titlebar">FACTURE</div>
@@ -2603,10 +2610,20 @@ function buildFactureInner(d) {
       - Modalités de paiement : ${escHtml(d.modalites)}<br>
       - Mode de paiement accepté : ${escHtml(d.mode_paiement)}
     </div>
-    <div class="fact-signature">
-      <div class="box">
-        Cachet et signature :<br><br><br><br>
-        <div style="border-top:1px solid #999;padding-top:4px;">Dog Dépannage</div>
+    <div class="fact-footer2">
+      <div>
+        Fait à Perrytonia, le ${dateFactureFr}
+        <div class="fact-signature2">
+          <div style="border-top:1px solid #999;width:160px;margin-top:24px;"></div>
+          <div class="name">${escHtml(auteur)}</div>
+          <div class="role">${escHtml(auteurRole)}<br>Dépannage</div>
+        </div>
+      </div>
+      <div class="fact-stamp">
+        <div class="company">DOG<br>COMPAGNIE</div>
+        <div style="font-size:8px;margin:2px 0;">Service Dépannage</div>
+        <div class="initials">${escHtml(initials)}</div>
+        <div style="font-size:8px;">${escHtml(auteurRole.toUpperCase())}<br>DÉPANNAGE</div>
       </div>
     </div>
     <div class="fact-footer">${escHtml(d.numero)} — Dog Compagnie — Facture générée le ${new Date().toLocaleDateString("fr-FR")}</div>
