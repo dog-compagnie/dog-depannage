@@ -821,6 +821,17 @@ tbody tr:hover{background:rgba(41,128,185,0.03);}
         </div>
 
         <div class="card">
+          <div class="card-hdr"><div class="card-hdr-title">👤 Client &amp; Fidélité</div></div>
+          <div class="card-body">
+            <div class="field-row-2">
+              <div class="field"><label>Prénom</label><input id="fact-cl-prenom" placeholder="Prénom" onchange="this.value=formatPrenom(this.value); lookupFidelite();"></div>
+              <div class="field"><label>Nom</label><input id="fact-cl-nom" placeholder="NOM" onchange="this.value=formatNom(this.value); lookupFidelite();"></div>
+            </div>
+            <div id="fact-fidelite-info"></div>
+          </div>
+        </div>
+
+        <div class="card">
           <div class="card-hdr"><div class="card-hdr-title">🧾 Informations de la facture</div></div>
           <div class="card-body">
             <div class="field-row-3">
@@ -866,6 +877,7 @@ tbody tr:hover{background:rgba(41,128,185,0.03);}
             </div>
             <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);padding:6px 0;">Montant TVA <span id="fact-montant-tva" style="color:#fff;">(20%) 0,00 €</span></div>
             <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:800;color:#fff;padding:10px 0 0;border-top:1px solid var(--border);margin-top:6px;">TOTAL TTC <span id="fact-total-ttc" style="color:#F0A840;">0,00 €</span></div>
+            <div id="fact-total-extra" style="margin-top:6px;"></div>
           </div>
         </div>
         <div class="card">
@@ -2366,6 +2378,10 @@ const TARIF_CATALOGUE = [
 let factureLignes = [{designation:"", prix:0, quantite:1}];
 let factureTvaTaux = 20;
 let currentFactureId = null;
+let currentFideliteClient = null;
+let factureFideliteDiscount = false;
+let factureCarteAchat = false;
+const PRIX_CARTE_FIDELITE = 500;
 
 async function initFacturationPage() {
   await nouvelleFacture(false);
@@ -2377,6 +2393,11 @@ async function nouvelleFacture(confirmFirst) {
   if(confirmFirst && !confirm("Repartir sur une facture vierge ? Les modifications non sauvegardées seront perdues.")) return;
   currentFactureId = null;
   factureLignes = [{designation:"", prix:0, quantite:1}];
+  document.getElementById("fact-cl-prenom").value = "";
+  document.getElementById("fact-cl-nom").value = "";
+  currentFideliteClient = null;
+  factureFideliteDiscount = false;
+  factureCarteAchat = false;
   document.getElementById("fact-date").value = todayISO();
   document.getElementById("fact-date-evt").value = "";
   document.getElementById("fact-objet").value = "";
@@ -2387,6 +2408,7 @@ async function nouvelleFacture(confirmFirst) {
   document.getElementById("fact-numero").value = await nextFactureNumero();
   setFactureTva(20);
   renderFactureLignes();
+  renderFideliteInfo();
 }
 
 async function nextFactureNumero() {
@@ -2397,6 +2419,74 @@ async function nextFactureNumero() {
     return `FA-${year}-${String(count+1).padStart(3,"0")}`;
   } catch(e) { return `FA-${year}-001`; }
 }
+
+// ─── CARTE DE FIDÉLITÉ ────────────────────────────────────────────
+function formatPrenom(s) {
+  s = (s||"").trim().toLowerCase();
+  if(!s) return "";
+  return s.replace(/(^|[\s-])([a-zàâäéèêëïîôöùûüçñ])/g, (m,sep,c)=>sep+c.toUpperCase());
+}
+function formatNom(s) {
+  return (s||"").trim().toUpperCase();
+}
+async function lookupFidelite() {
+  const prenom = formatPrenom(document.getElementById("fact-cl-prenom").value);
+  const nom = formatNom(document.getElementById("fact-cl-nom").value);
+  document.getElementById("fact-cl-prenom").value = prenom;
+  document.getElementById("fact-cl-nom").value = nom;
+  if(!prenom || !nom) {
+    currentFideliteClient = null;
+    factureFideliteDiscount = false;
+    factureCarteAchat = false;
+    renderFideliteInfo();
+    recomputeFactureTotals();
+    return;
+  }
+  try {
+    const rows = await sb(`cartes_fidelite?client_prenom=eq.${encodeURIComponent(prenom)}&client_nom=eq.${encodeURIComponent(nom)}&select=*`);
+    currentFideliteClient = (rows && rows[0]) || {client_prenom:prenom, client_nom:nom, passages:0, carte_achetee:false};
+    factureFideliteDiscount = currentFideliteClient.passages>=10;
+    factureCarteAchat = false;
+    renderFideliteInfo();
+    recomputeFactureTotals();
+  } catch(e) { console.warn("lookupFidelite error:", e.message); }
+}
+
+function renderFideliteInfo() {
+  const el = document.getElementById("fact-fidelite-info");
+  if(!el) return;
+  if(!currentFideliteClient) { el.innerHTML = ""; return; }
+  const c = currentFideliteClient;
+  const eligible = c.passages>=10;
+  let html = `<div style="background:rgba(13,21,32,0.4);border-radius:9px;padding:12px 14px;margin-top:12px;">
+    <div style="font-size:12px;color:var(--text2);margin-bottom:8px;">🎫 Passages fidélité : <strong style="color:#fff;">${c.passages} / 10</strong></div>`;
+  if(eligible) {
+    html += `<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#52D98B;font-weight:700;background:rgba(82,217,139,0.1);padding:8px 10px;border-radius:7px;margin-bottom:8px;cursor:pointer;">
+      <input type="checkbox" ${factureFideliteDiscount?"checked":""} onchange="toggleFideliteDiscount(this.checked)">
+      🎉 Ce client a droit à -50% sur cette facture !
+    </label>`;
+  }
+  if(c.carte_achetee) {
+    html += `<div style="font-size:11px;color:#5DADE2;">✓ Carte de fidélité déjà achetée</div>`;
+  } else {
+    html += `<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);cursor:pointer;">
+      <input type="checkbox" ${factureCarteAchat?"checked":""} onchange="toggleCarteAchat(this.checked)">
+      Le client achète sa carte de fidélité aujourd'hui (${fmtEuro(PRIX_CARTE_FIDELITE)} HT, achat unique)
+    </label>`;
+  }
+  html += `</div>`;
+  el.innerHTML = html;
+}
+function toggleFideliteDiscount(checked) {
+  factureFideliteDiscount = checked;
+  recomputeFactureTotals();
+}
+function toggleCarteAchat(checked) {
+  factureCarteAchat = checked;
+  recomputeFactureTotals();
+}
+
+
 
 function renderFactureLignes() {
   const el = document.getElementById("fact-lignes-container");
@@ -2463,19 +2553,29 @@ function setFactureTva(taux) {
   renderFactureLignes();
 }
 function calculerFactureTotaux() {
-  const totalHT = factureLignes.reduce((s,l)=>s+(l.prix*l.quantite),0);
+  let prestationsHT = factureLignes.reduce((s,l)=>s+(l.prix*l.quantite),0);
+  if(factureFideliteDiscount) prestationsHT = prestationsHT * 0.5;
+  const carteHT = factureCarteAchat ? PRIX_CARTE_FIDELITE : 0;
+  const totalHT = prestationsHT + carteHT;
   const montantTva = totalHT*factureTvaTaux/100;
   const totalTTC = totalHT+montantTva;
-  return {totalHT, montantTva, totalTTC};
+  return {totalHT, montantTva, totalTTC, prestationsHT, carteHT};
 }
 function recomputeFactureTotals() {
-  const {totalHT, montantTva, totalTTC} = calculerFactureTotaux();
+  const {totalHT, montantTva, totalTTC, prestationsHT, carteHT} = calculerFactureTotaux();
   const elHT = document.getElementById("fact-total-ht");
   const elTva = document.getElementById("fact-montant-tva");
   const elTTC = document.getElementById("fact-total-ttc");
+  const elExtra = document.getElementById("fact-total-extra");
   if(elHT) elHT.textContent = fmtEuro(totalHT);
   if(elTva) elTva.textContent = `(${factureTvaTaux}%) `+fmtEuro(montantTva);
   if(elTTC) elTTC.textContent = fmtEuro(totalTTC);
+  if(elExtra) {
+    let lines = "";
+    if(factureFideliteDiscount) lines += `<div style="display:flex;justify-content:space-between;font-size:11px;color:#52D98B;padding:2px 0;">🎉 Remise fidélité -50% appliquée</div>`;
+    if(factureCarteAchat) lines += `<div style="display:flex;justify-content:space-between;font-size:11px;color:#5DADE2;padding:2px 0;">🎫 Dont achat carte fidélité : ${fmtEuro(carteHT)}</div>`;
+    elExtra.innerHTML = lines;
+  }
 }
 
 function collectFactureData() {
@@ -2486,6 +2586,10 @@ function collectFactureData() {
     em_adresse: document.getElementById("fact-em-adresse").value.trim(),
     em_tel: document.getElementById("fact-em-tel").value.trim(),
     em_email: document.getElementById("fact-em-email").value.trim(),
+    client_prenom: formatPrenom(document.getElementById("fact-cl-prenom").value),
+    client_nom: formatNom(document.getElementById("fact-cl-nom").value),
+    remise_fidelite: factureFideliteDiscount,
+    carte_achetee_ici: factureCarteAchat,
     date_facture: document.getElementById("fact-date").value || todayISO(),
     date_prestation: document.getElementById("fact-date-evt").value || null,
     objet: document.getElementById("fact-objet").value.trim(),
@@ -2497,6 +2601,24 @@ function collectFactureData() {
     modalites: document.getElementById("fact-modalites").value.trim(),
     mode_paiement: document.getElementById("fact-mode-paiement").value.trim(),
   };
+}
+
+async function updateFideliteApresFacture(prenom, nom) {
+  try {
+    const rows = await sb(`cartes_fidelite?client_prenom=eq.${encodeURIComponent(prenom)}&client_nom=eq.${encodeURIComponent(nom)}&select=*`);
+    const existing = rows && rows[0];
+    const wasEligible = existing ? existing.passages>=10 : false;
+    const newPassages = (factureFideliteDiscount && wasEligible) ? 0 : Math.min(10, (existing?existing.passages:0)+1);
+    const newCarteAchetee = (existing && existing.carte_achetee) || factureCarteAchat;
+    if(existing) {
+      await sb(`cartes_fidelite?id=eq.${existing.id}`, {method:"PATCH", body:JSON.stringify({passages:newPassages, carte_achetee:newCarteAchetee, updated_at:new Date().toISOString()})});
+    } else {
+      await fetch(SB_URL+"/rest/v1/cartes_fidelite", {
+        method:"POST", headers:{...H,"Prefer":"return=minimal"}, mode:"cors",
+        body: JSON.stringify({client_prenom:prenom, client_nom:nom, passages:newPassages, carte_achetee:newCarteAchetee})
+      });
+    }
+  } catch(e) { console.warn("updateFideliteApresFacture error:", e.message); }
 }
 
 async function sauvegarderFacture() {
@@ -2516,6 +2638,9 @@ async function sauvegarderFacture() {
       currentFactureId = created && created[0] && created[0].id;
     }
     logActivity("facture_enregistree", `Facture ${data.numero} enregistrée (HT ${fmtEuro(data.total_ht)} · TVA ${fmtEuro(data.montant_tva)} · TTC ${fmtEuro(data.total_ttc)})`);
+    if(data.client_prenom && data.client_nom) {
+      await updateFideliteApresFacture(data.client_prenom, data.client_nom);
+    }
     toast("✓ Facture enregistrée : "+data.numero);
     loadFactureHistory();
   } catch(e) { toast("Erreur : "+e.message,"#E74C3C"); }
@@ -2584,6 +2709,7 @@ function buildFactureInner(d) {
         <div class="ligne">Numéro de facture : ${escHtml(d.numero)}</div>
         <div class="ligne">Date de la prestation : ${datePrestationFr}</div>
         <div class="ligne">Objet : ${escHtml(d.objet)||"—"}</div>
+        ${(d.client_prenom||d.client_nom) ? `<div class="ligne">Client : ${escHtml(((d.client_prenom||"")+" "+(d.client_nom||"")).trim())}</div>` : ""}
       </div>
     </div>
     <div class="fact-section-title">Détail de la prestation</div>
@@ -2599,6 +2725,11 @@ function buildFactureInner(d) {
       <tbody>${lignesHTML}</tbody>
     </table>
     <div class="fact-totaux">
+      ${(d.remise_fidelite || d.carte_achetee_ici) ? `
+      <div class="row"><span>Sous-total prestations HT</span><span>${fmtEuro((d.lignes||[]).reduce((s,l)=>s+(l.prix*l.quantite),0))}</span></div>
+      ${d.remise_fidelite ? `<div class="row" style="color:#1E8449;font-weight:700;"><span>🎉 Remise fidélité -50%</span><span>-${fmtEuro((d.lignes||[]).reduce((s,l)=>s+(l.prix*l.quantite),0)*0.5)}</span></div>` : ""}
+      ${d.carte_achetee_ici ? `<div class="row"><span>🎫 Achat carte de fidélité</span><span>+${fmtEuro(500)}</span></div>` : ""}
+      ` : ""}
       <div class="row"><span>Total HT</span><span>${fmtEuro(d.total_ht)}</span></div>
       <div class="row"><span>TVA (${d.tva_taux}%)</span><span>${fmtEuro(d.montant_tva)}</span></div>
       <div class="row ttc"><span>Total TTC (net à payer)</span><span>${fmtEuro(d.total_ttc)}</span></div>
@@ -2682,6 +2813,8 @@ async function chargerFacture(id) {
     document.getElementById("fact-em-adresse").value = d.em_adresse||"";
     document.getElementById("fact-em-tel").value = d.em_tel||"";
     document.getElementById("fact-em-email").value = d.em_email||"";
+    document.getElementById("fact-cl-prenom").value = d.client_prenom||"";
+    document.getElementById("fact-cl-nom").value = d.client_nom||"";
     document.getElementById("fact-date").value = d.date_facture||"";
     document.getElementById("fact-numero").value = d.numero||"";
     document.getElementById("fact-date-evt").value = d.date_prestation||"";
@@ -2691,6 +2824,10 @@ async function chargerFacture(id) {
     document.getElementById("fact-modalites").value = d.modalites||"";
     document.getElementById("fact-mode-paiement").value = d.mode_paiement||"";
     factureLignes = (Array.isArray(d.lignes) && d.lignes.length) ? d.lignes : [{designation:"",prix:0,quantite:1}];
+    if(d.client_prenom && d.client_nom) { await lookupFidelite(); } else { currentFideliteClient=null; }
+    factureFideliteDiscount = !!d.remise_fidelite;
+    factureCarteAchat = !!d.carte_achetee_ici;
+    renderFideliteInfo();
     setFactureTva(d.tva_taux||20);
     renderFactureLignes();
     toast("✓ Facture chargée : "+d.numero);
