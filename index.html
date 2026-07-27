@@ -1346,6 +1346,7 @@ const JOURNAL_TYPES = {
   patrouille_maj:       {color:"#52D98B", label:"Intervention"},
   compte_cree:          {color:"#5DADE2", label:"Compte"},
   compte_supprime:      {color:"#F08080", label:"Compte"},
+  compte_pin_modifie:   {color:"#F0A840", label:"Compte"},
   hierarchie_role:      {color:"#9B59B6", label:"Compte"},
   hierarchie_general:   {color:"#F0A840", label:"Compte"},
   hierarchie_adjoint:   {color:"#48C9B0", label:"Compte"},
@@ -5076,15 +5077,36 @@ function renderComptes() {
   if(cnt) cnt.textContent = allComptes.length+" compte(s)";
   if(!allComptes.length){ el.innerHTML='<div class="empty"><p>Aucun compte créé.</p></div>'; return; }
   const roleLabels = {agent:"Dépanneur", responsable:"Responsable", pdg:"PDG"};
+  const isAdmin = role==="admin";
   el.innerHTML = allComptes.map(c=>`
     <div class="admin-compte">
       <div class="admin-compte-info">
         <div class="ac-nom">${esc(c.prenom)} ${esc(c.nom)}</div>
         <div class="ac-role">${roleLabels[c.role]||c.role}</div>
-        <div class="ac-pin">PIN : ${"•".repeat((c.pin||"").length)}</div>
+        ${isAdmin ? `
+          <div class="ac-pin" style="display:flex;align-items:center;gap:6px;">
+            PIN : <input type="text" value="${esc(c.pin||"")}" id="pin-edit-${c.id}" style="width:80px;background:rgba(13,21,32,0.7);border:1px solid rgba(41,128,185,0.25);border-radius:6px;color:#fff;font-size:12px;padding:3px 6px;">
+            <button class="btn btn-ghost btn-sm" onclick="modifierPin('${c.id}')" style="padding:2px 8px;">💾</button>
+          </div>`
+        : `<div class="ac-pin">PIN : ${"•".repeat((c.pin||"").length)}</div>`}
       </div>
       <button class="btn btn-danger btn-sm" onclick="supprimerCompte('${c.id}')">🗑</button>
     </div>`).join("");
+}
+
+async function modifierPin(id) {
+  const inp = document.getElementById("pin-edit-"+id);
+  if(!inp) return;
+  const newPin = inp.value.trim();
+  if(!newPin || newPin.length<4) { toast("Le PIN doit faire au moins 4 chiffres.","#E74C3C"); return; }
+  if(allComptes.some(c=>String(c.id)!==String(id) && c.pin===newPin)) { toast("Ce PIN est déjà utilisé par un autre compte.","#E74C3C"); return; }
+  try {
+    await sb(`agents_comptes?id=eq.${id}`,{method:"PATCH",body:JSON.stringify({pin:newPin})});
+    const c = allComptes.find(x=>String(x.id)===String(id));
+    logActivity("compte_pin_modifie", `PIN modifié pour ${c?c.prenom+" "+c.nom:"un compte"} (par Admin)`);
+    toast("✓ PIN mis à jour");
+    await loadComptes();
+  } catch(e) { toast("Erreur : "+e.message,"#E74C3C"); }
 }
 
 async function creerCompte() {
