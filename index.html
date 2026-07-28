@@ -2492,6 +2492,7 @@ function toggleCarteAchat(checked) {
 function renderFactureLignes() {
   const el = document.getElementById("fact-lignes-container");
   if(!el) return;
+  const canEditPrix = (role==="pdg"||role==="admin");
   el.innerHTML = factureLignes.map((l,i)=>{
     const isCatalogue = TARIF_CATALOGUE.some(t=>t.nom===l.designation);
     const sousTotal = l.prix*l.quantite;
@@ -2508,7 +2509,7 @@ function renderFactureLignes() {
       </div>
       ${!isCatalogue ? `<div class="field"><label>Désignation personnalisée</label><input value="${esc(l.designation)}" oninput="updateFactureLigne(${i},'designation',this.value)" placeholder="Ex : Intervention spécifique"></div>` : ""}
       <div class="field-row-2">
-        <div class="field"><label>Prix unitaire HT</label><input type="number" min="0" step="0.01" value="${l.prix}" oninput="updateFactureLigne(${i},'prix',this.value)"></div>
+        <div class="field"><label>Prix unitaire HT</label><input type="number" min="0" step="0.01" value="${l.prix}" ${canEditPrix?"":"disabled"} oninput="updateFactureLigne(${i},'prix',this.value)" title="${canEditPrix?"":"Réservé à PDG et Admin"}"></div>
         <div class="field"><label>Quantité</label><input type="number" min="1" step="1" value="${l.quantite}" oninput="updateFactureLigne(${i},'quantite',this.value)"></div>
       </div>
       <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-top:6px;">
@@ -2536,6 +2537,7 @@ function supprimerLigneFacture(i) {
 }
 function updateFactureLigne(i, field, value) {
   if(!factureLignes[i]) return;
+  if(field==="prix" && role!=="pdg" && role!=="admin") { toast("Seuls PDG et Admin peuvent modifier les tarifs.","#E74C3C"); renderFactureLignes(); return; }
   factureLignes[i][field] = (field==="designation") ? value : (parseFloat(value)||0);
   const htEl = document.getElementById("fact-ligne-ht-"+i);
   const ttcEl = document.getElementById("fact-ligne-ttc-"+i);
