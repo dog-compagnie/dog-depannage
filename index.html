@@ -851,6 +851,11 @@ tbody tr:hover{background:rgba(41,128,185,0.03);}
           <div class="card-body" id="fact-lignes-container"></div>
         </div>
 
+        <div class="card" id="gestion-tarifs-card" style="display:none;">
+          <div class="card-hdr"><div class="card-hdr-title">🏷️ Gérer les tarifs</div></div>
+          <div class="card-body" id="gestion-tarifs-body"></div>
+        </div>
+
         <div class="card">
           <div class="card-hdr"><div class="card-hdr-title">📄 Conditions de règlement</div></div>
           <div class="card-body">
@@ -1340,6 +1345,7 @@ const JOURNAL_TYPES = {
   devis_supprime:       {color:"#F08080", label:"Devis"},
   facture_enregistree:  {color:"#D35400", label:"Facturation"},
   facture_supprimee:    {color:"#F08080", label:"Facturation"},
+  tarif_modifie:        {color:"#F0A840", label:"Facturation"},
   absence_nouvelle:     {color:"#F0A840", label:"Absence"},
   absence_statut:       {color:"#F0A840", label:"Absence"},
   absence_suppr:        {color:"#F08080", label:"Absence"},
@@ -2361,7 +2367,7 @@ async function supprimerDevis(id) {
 }
 
 // ─── FACTURATION CLIENTS (distincte des devis) ──────────────────────
-const TARIF_CATALOGUE = [
+let TARIF_CATALOGUE = [
   {nom:"Frais de déplacement", prix:50},
   {nom:"Frais de remorquage VL", prix:100},
   {nom:"Frais de remorquage PL", prix:150},
@@ -2375,7 +2381,13 @@ const TARIF_CATALOGUE = [
   {nom:"Batterie 12V", prix:125},
   {nom:"Vitres", prix:100},
   {nom:"Contrôle technique", prix:2400},
-];
+]; // valeurs par défaut, remplacées par le contenu de la table Supabase "tarifs" au chargement
+async function loadTarifCatalogue() {
+  try {
+    const rows = await sb("tarifs?select=*&order=nom");
+    if(rows && rows.length) TARIF_CATALOGUE = rows.map(r=>({id:r.id, nom:r.nom, prix:r.prix}));
+  } catch(e) { console.warn("loadTarifCatalogue error (valeurs par défaut conservées):", e.message); }
+}
 let factureLignes = [{designation:"", prix:0, quantite:1}];
 let factureTvaTaux = 20;
 let currentFactureId = null;
@@ -2385,8 +2397,10 @@ let factureCarteAchat = false;
 const PRIX_CARTE_FIDELITE = 500;
 
 async function initFacturationPage() {
+  await loadTarifCatalogue();
   await nouvelleFacture(false);
   loadFactureHistory();
+  renderGestionTarifs();
 }
 
 async function nouvelleFacture(confirmFirst) {
@@ -2492,7 +2506,6 @@ function toggleCarteAchat(checked) {
 function renderFactureLignes() {
   const el = document.getElementById("fact-lignes-container");
   if(!el) return;
-  const canEditPrix = (role==="pdg"||role==="admin");
   el.innerHTML = factureLignes.map((l,i)=>{
     const isCatalogue = TARIF_CATALOGUE.some(t=>t.nom===l.designation);
     const sousTotal = l.prix*l.quantite;
@@ -2509,7 +2522,7 @@ function renderFactureLignes() {
       </div>
       ${!isCatalogue ? `<div class="field"><label>Désignation personnalisée</label><input value="${esc(l.designation)}" oninput="updateFactureLigne(${i},'designation',this.value)" placeholder="Ex : Intervention spécifique"></div>` : ""}
       <div class="field-row-2">
-        <div class="field"><label>Prix unitaire HT</label><input type="number" min="0" step="0.01" value="${l.prix}" ${canEditPrix?"":"disabled"} oninput="updateFactureLigne(${i},'prix',this.value)" title="${canEditPrix?"":"Réservé à PDG et Admin"}"></div>
+        <div class="field"><label>Prix unitaire HT</label><input type="number" min="0" step="0.01" value="${l.prix}" ${isCatalogue?"disabled":""} oninput="updateFactureLigne(${i},'prix',this.value)" title="${isCatalogue?"Prix fixé par le catalogue de tarifs (modifiable par PDG/Admin dans « Gérer les tarifs »)":""}"></div>
         <div class="field"><label>Quantité</label><input type="number" min="1" step="1" value="${l.quantite}" oninput="updateFactureLigne(${i},'quantite',this.value)"></div>
       </div>
       <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-top:6px;">
@@ -2527,6 +2540,39 @@ function selectFacturePrestation(i, nom) {
   if(item) factureLignes[i].prix = item.prix;
   renderFactureLignes();
 }
+function renderGestionTarifs() {
+  const card = document.getElementById("gestion-tarifs-card");
+  const body = document.getElementById("gestion-tarifs-body");
+  if(!card || !body) return;
+  const canManage = (role==="pdg"||role==="admin");
+  card.style.display = canManage ? "block" : "none";
+  if(!canManage) return;
+  body.innerHTML = `<div style="font-size:11px;color:var(--text2);margin-bottom:12px;">Modifier un tarif ici met à jour le prix affiché dans « Prestation » pour tout le monde, pour toutes les futures factures.</div>` +
+    TARIF_CATALOGUE.map(t=>`
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+      <div style="flex:1;font-size:12px;color:#fff;">${esc(t.nom)}</div>
+      <input type="number" min="0" step="0.01" value="${t.prix}" id="tarif-prix-${t.id}" style="width:100px;background:rgba(13,21,32,0.7);border:1px solid rgba(41,128,185,0.25);border-radius:7px;color:#fff;font-size:12px;padding:6px 8px;">
+      <button class="btn btn-ghost btn-sm" onclick="modifierTarif(${t.id})">💾</button>
+    </div>`).join("");
+}
+async function modifierTarif(id) {
+  const inp = document.getElementById("tarif-prix-"+id);
+  if(!inp) return;
+  const newPrix = parseFloat(inp.value);
+  if(isNaN(newPrix) || newPrix<0) { toast("Prix invalide.","#E74C3C"); return; }
+  try {
+    await sb(`tarifs?id=eq.${id}`, {method:"PATCH", body:JSON.stringify({prix:newPrix, updated_at:new Date().toISOString()})});
+    const t = TARIF_CATALOGUE.find(x=>x.id===id);
+    logActivity("tarif_modifie", `Tarif "${t?t.nom:id}" mis à jour : ${fmtEuro(newPrix)}`);
+    toast("✓ Tarif mis à jour");
+    await loadTarifCatalogue();
+    renderGestionTarifs();
+    // Met à jour les lignes déjà sélectionnées sur ce tarif, sur la facture en cours
+    factureLignes.forEach(l=>{ if(t && l.designation===t.nom) l.prix = newPrix; });
+    renderFactureLignes();
+  } catch(e) { toast("Erreur : "+e.message,"#E74C3C"); }
+}
+
 function ajouterLigneFacture() {
   factureLignes.push({designation:"", prix:0, quantite:1});
   renderFactureLignes();
@@ -2537,7 +2583,7 @@ function supprimerLigneFacture(i) {
 }
 function updateFactureLigne(i, field, value) {
   if(!factureLignes[i]) return;
-  if(field==="prix" && role!=="pdg" && role!=="admin") { toast("Seuls PDG et Admin peuvent modifier les tarifs.","#E74C3C"); renderFactureLignes(); return; }
+  if(field==="prix" && TARIF_CATALOGUE.some(t=>t.nom===factureLignes[i].designation)) { toast("Le prix des prestations du catalogue se change dans « Gérer les tarifs » (PDG/Admin).","#E74C3C"); renderFactureLignes(); return; }
   factureLignes[i][field] = (field==="designation") ? value : (parseFloat(value)||0);
   const htEl = document.getElementById("fact-ligne-ht-"+i);
   const ttcEl = document.getElementById("fact-ligne-ttc-"+i);
