@@ -2527,7 +2527,9 @@ async function openClientDetail(prenom, nom) {
       <div style="margin-bottom:16px;">
         <div style="font-size:15px;font-weight:800;color:#fff;margin-bottom:8px;">${esc(prenom)} ${esc(nom)}</div>
         <div style="font-size:12px;color:var(--text2);line-height:1.8;">
-          🎫 Passages fidélité : <strong style="color:${eligible?"#52D98B":"#fff"};">${passages} / 10</strong>${eligible?` <span style="color:#52D98B;">(remise dispo !)</span>`:` — encore ${restants} avant la remise`}<br>
+          ${fid&&fid.carte_achetee
+            ? `🎫 Passages fidélité : <strong style="color:${eligible?"#52D98B":"#fff"};">${passages} / 10</strong>${eligible?` <span style="color:#52D98B;">(remise dispo !)</span>`:` — encore ${restants} avant la remise`}<br>`
+            : `🎫 Passages fidélité : <span style="color:var(--text3);font-style:italic;">non comptés (carte non achetée)</span><br>`}
           Carte de fidélité : ${fid&&fid.carte_achetee?'<strong style="color:#5DADE2;">✓ Achetée</strong>':"Non achetée"}<br>
           Nombre de facturations : ${(factRows||[]).length}
         </div>
@@ -2632,7 +2634,7 @@ async function lookupFidelite() {
   try {
     const rows = await sb(`cartes_fidelite?client_prenom=eq.${encodeURIComponent(prenom)}&client_nom=eq.${encodeURIComponent(nom)}&select=*`);
     currentFideliteClient = (rows && rows[0]) || {client_prenom:prenom, client_nom:nom, passages:0, carte_achetee:false};
-    factureFideliteDiscount = currentFideliteClient.passages>=10;
+    factureFideliteDiscount = currentFideliteClient.carte_achetee && currentFideliteClient.passages>=10;
     factureCarteAchat = false;
     renderFideliteInfo();
     recomputeFactureTotals();
@@ -2644,9 +2646,11 @@ function renderFideliteInfo() {
   if(!el) return;
   if(!currentFideliteClient) { el.innerHTML = ""; return; }
   const c = currentFideliteClient;
-  const eligible = c.passages>=10;
-  let html = `<div style="background:rgba(13,21,32,0.4);border-radius:9px;padding:12px 14px;margin-top:12px;">
-    <div style="font-size:12px;color:var(--text2);margin-bottom:8px;">🎫 Passages fidélité : <strong style="color:#fff;">${c.passages} / 10</strong></div>`;
+  const eligible = c.carte_achetee && c.passages>=10;
+  let html = `<div style="background:rgba(13,21,32,0.4);border-radius:9px;padding:12px 14px;margin-top:12px;">`;
+  html += c.carte_achetee
+    ? `<div style="font-size:12px;color:var(--text2);margin-bottom:8px;">🎫 Passages fidélité : <strong style="color:#fff;">${c.passages} / 10</strong></div>`
+    : `<div style="font-size:12px;color:var(--text3);font-style:italic;margin-bottom:8px;">🎫 Passages fidélité : non comptés (carte non achetée)</div>`;
   if(eligible) {
     html += `<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#52D98B;font-weight:700;background:rgba(82,217,139,0.1);padding:8px 10px;border-radius:7px;margin-bottom:8px;cursor:pointer;">
       <input type="checkbox" ${factureFideliteDiscount?"checked":""} onchange="toggleFideliteDiscount(this.checked)">
@@ -2828,9 +2832,14 @@ async function updateFideliteApresFacture(prenom, nom) {
   try {
     const rows = await sb(`cartes_fidelite?client_prenom=eq.${encodeURIComponent(prenom)}&client_nom=eq.${encodeURIComponent(nom)}&select=*`);
     const existing = rows && rows[0];
-    const wasEligible = existing ? existing.passages>=10 : false;
-    const newPassages = (factureFideliteDiscount && wasEligible) ? 0 : Math.min(10, (existing?existing.passages:0)+1);
     const newCarteAchetee = (existing && existing.carte_achetee) || factureCarteAchat;
+    let newPassages;
+    if(!newCarteAchetee) {
+      newPassages = 0; // pas de carte de fidélité = pas de comptage de passages
+    } else {
+      const wasEligible = existing ? (existing.passages||0)>=10 : false;
+      newPassages = (factureFideliteDiscount && wasEligible) ? 0 : Math.min(10, (existing?(existing.passages||0):0)+1);
+    }
     if(existing) {
       await sb(`cartes_fidelite?id=eq.${existing.id}`, {method:"PATCH", body:JSON.stringify({passages:newPassages, carte_achetee:newCarteAchetee, updated_at:new Date().toISOString()})});
     } else {
