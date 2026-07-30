@@ -723,6 +723,7 @@ tbody tr:hover{background:rgba(41,128,185,0.03);}
     <div class="card" style="max-width:420px;">
       <div class="card-body">
         <div class="field"><label>🔍 Rechercher un client</label><input id="clients-search" placeholder="Nom ou prénom…" oninput="loadClientsList()"></div>
+        <div class="field"><label>🧾 Rechercher par numéro de facture</label><input id="facture-search" placeholder="Ex : FA-2026-014" oninput="loadClientsList()"></div>
       </div>
     </div>
     <div id="clients-list-container" style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;">
@@ -2493,9 +2494,21 @@ async function supprimerDevis(id) {
 async function loadClientsList() {
   const el = document.getElementById("clients-list");
   const q = (document.getElementById("clients-search")?.value||"").trim().toLowerCase();
+  const qFacture = (document.getElementById("facture-search")?.value||"").trim();
+  if(!el) return;
+  if(qFacture) {
+    try {
+      const rows = await sb(`factures?select=*&numero=ilike.*${encodeURIComponent(qFacture)}*&order=created_at.desc&limit=50`);
+      if(!rows.length) { el.innerHTML = '<div class="empty"><p>Aucune facture trouvée pour ce numéro.</p></div>'; return; }
+      el.innerHTML = rows.map(f=>`
+        <div class="log-item" style="cursor:pointer;" onclick="openClientDetail('${f.client_prenom||""}','${f.client_nom||""}')">
+          <div><div class="log-agent">${esc(f.numero)}</div><div class="log-dates">${(f.client_prenom||f.client_nom)?esc((f.client_prenom||"")+" "+(f.client_nom||"")):"Client non renseigné"} · ${fmtEuro(f.total_ttc)} TTC</div></div>
+        </div>`).join("");
+    } catch(e) { el.innerHTML = '<div class="empty"><p>Erreur de chargement.</p></div>'; }
+    return;
+  }
   try {
     const rows = await sb("cartes_fidelite?select=*&order=client_nom");
-    if(!el) return;
     const filtered = q ? rows.filter(c=>((c.client_prenom||"")+" "+(c.client_nom||"")).toLowerCase().includes(q)) : rows;
     if(!filtered.length) { el.innerHTML = '<div class="empty"><p>Aucun client trouvé.</p></div>'; return; }
     el.innerHTML = filtered.map(c=>`
