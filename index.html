@@ -2494,7 +2494,7 @@ async function loadClientsList() {
   const el = document.getElementById("clients-list");
   const q = (document.getElementById("clients-search")?.value||"").trim().toLowerCase();
   try {
-    const rows = await sb("cartes_fidelite?select=*&order=nom");
+    const rows = await sb("cartes_fidelite?select=*&order=client_nom");
     if(!el) return;
     const filtered = q ? rows.filter(c=>((c.client_prenom||"")+" "+(c.client_nom||"")).toLowerCase().includes(q)) : rows;
     if(!filtered.length) { el.innerHTML = '<div class="empty"><p>Aucun client trouvé.</p></div>'; return; }
