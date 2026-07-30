@@ -717,6 +717,26 @@ tbody tr:hover{background:rgba(41,128,185,0.03);}
   </div>
 
   <!-- PAGE JOURNAL D'ACTIVITÉ (Admin uniquement) -->
+  <div class="page" id="page-dossiers-clients">
+    <div class="page-title">Dossiers <span>clients</span></div>
+    <div class="page-sub">Fiche de fidélité et historique des facturations de chaque client.</div>
+    <div class="card" style="max-width:420px;">
+      <div class="card-body">
+        <div class="field"><label>🔍 Rechercher un client</label><input id="clients-search" placeholder="Nom ou prénom…" oninput="loadClientsList()"></div>
+      </div>
+    </div>
+    <div id="clients-list-container" style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;">
+      <div class="card">
+        <div class="card-hdr"><div class="card-hdr-title">📇 Clients enregistrés</div></div>
+        <div class="card-body" id="clients-list"><div class="empty"><p>Chargement…</p></div></div>
+      </div>
+      <div class="card">
+        <div class="card-hdr"><div class="card-hdr-title">📋 Détail du dossier</div></div>
+        <div class="card-body" id="client-detail"><div class="empty"><p>Sélectionnez un client dans la liste.</p></div></div>
+      </div>
+    </div>
+  </div>
+
   <div class="page" id="page-devis">
     <div class="page-title">Devis <span>clients</span></div>
     <div class="page-sub">Créez et générez des devis de prestation pour vos clients.</div>
@@ -828,7 +848,7 @@ tbody tr:hover{background:rgba(41,128,185,0.03);}
             </div>
             <div class="field-row-2">
               <div class="field"><label>Téléphone</label><input id="fact-em-tel" value="06.21.17.15.53"></div>
-              <div class="field"><label>Email</label><input id="fact-em-email" value="dog-depannage237@a4l.pro"></div>
+              <div class="field"><label>Email</label><input id="fact-em-email" value="dog-compagnie237@a4l.pro"></div>
             </div>
           </div>
         </div>
@@ -1447,6 +1467,7 @@ const JOURNAL_TYPES = {
   fiche_paie_suppr:     {color:"#F08080", label:"Effectifs"},
   facture_enregistree:  {color:"#D35400", label:"Facturation"},
   facture_supprimee:    {color:"#F08080", label:"Facturation"},
+  facture_tva:          {color:"#5DADE2", label:"Facturation"},
   tarif_modifie:        {color:"#F0A840", label:"Facturation"},
   absence_nouvelle:     {color:"#F0A840", label:"Absence"},
   absence_statut:       {color:"#F0A840", label:"Absence"},
@@ -2468,6 +2489,55 @@ async function supprimerDevis(id) {
   } catch(e) { toast("Erreur : "+e.message,"#E74C3C"); }
 }
 
+// ─── DOSSIERS CLIENTS (fidélité + historique de facturation) ────────
+async function loadClientsList() {
+  const el = document.getElementById("clients-list");
+  const q = (document.getElementById("clients-search")?.value||"").trim().toLowerCase();
+  try {
+    const rows = await sb("cartes_fidelite?select=*&order=nom");
+    if(!el) return;
+    const filtered = q ? rows.filter(c=>((c.client_prenom||"")+" "+(c.client_nom||"")).toLowerCase().includes(q)) : rows;
+    if(!filtered.length) { el.innerHTML = '<div class="empty"><p>Aucun client trouvé.</p></div>'; return; }
+    el.innerHTML = filtered.map(c=>`
+      <div class="log-item" style="cursor:pointer;" onclick="openClientDetail('${c.client_prenom}','${c.client_nom}')">
+        <div><div class="log-agent">${esc(c.client_prenom)} ${esc(c.client_nom)}</div><div class="log-dates">${c.passages||0} / 10 passages${c.carte_achetee?" · 🎫 Carte fidélité":""}</div></div>
+      </div>`).join("");
+  } catch(e) { if(el) el.innerHTML = '<div class="empty"><p>Erreur de chargement.</p></div>'; }
+}
+
+async function openClientDetail(prenom, nom) {
+  const el = document.getElementById("client-detail");
+  if(!el) return;
+  el.innerHTML = '<div class="empty"><p>Chargement…</p></div>';
+  try {
+    const [fidRows, factRows] = await Promise.all([
+      sb(`cartes_fidelite?client_prenom=eq.${encodeURIComponent(prenom)}&client_nom=eq.${encodeURIComponent(nom)}&select=*`),
+      sb(`factures?client_prenom=eq.${encodeURIComponent(prenom)}&client_nom=eq.${encodeURIComponent(nom)}&select=*&order=created_at.desc`),
+    ]);
+    const fid = fidRows && fidRows[0];
+    const passages = fid ? (fid.passages||0) : 0;
+    const restants = Math.max(0, 10-passages);
+    const eligible = passages>=10;
+    const facturesHtml = (factRows||[]).length ? factRows.map(f=>`
+      <div class="log-item">
+        <div><div class="log-agent">${esc(f.numero)}</div><div class="log-dates">${fmtEuro(f.total_ttc)} TTC · ${f.date_facture?new Date(f.date_facture+"T12:00:00").toLocaleDateString("fr-FR"):""}${f.remise_fidelite?" · 🎉 remise":""}</div></div>
+        <button class="btn btn-primary btn-sm" onclick="reprintFacture('${f.id}')">👁 Revoir</button>
+      </div>`).join("") : '<div class="empty"><p>Aucune facturation enregistrée.</p></div>';
+    el.innerHTML = `
+      <div style="margin-bottom:16px;">
+        <div style="font-size:15px;font-weight:800;color:#fff;margin-bottom:8px;">${esc(prenom)} ${esc(nom)}</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.8;">
+          🎫 Passages fidélité : <strong style="color:${eligible?"#52D98B":"#fff"};">${passages} / 10</strong>${eligible?` <span style="color:#52D98B;">(remise dispo !)</span>`:` — encore ${restants} avant la remise`}<br>
+          Carte de fidélité : ${fid&&fid.carte_achetee?'<strong style="color:#5DADE2;">✓ Achetée</strong>':"Non achetée"}<br>
+          Nombre de facturations : ${(factRows||[]).length}
+        </div>
+      </div>
+      <div style="font-size:12px;font-weight:800;color:var(--text2);text-transform:uppercase;margin-bottom:8px;">📄 Historique des facturations</div>
+      ${facturesHtml}
+    `;
+  } catch(e) { el.innerHTML = '<div class="empty"><p>Erreur de chargement.</p></div>'; }
+}
+
 // ─── FACTURATION CLIENTS (distincte des devis) ──────────────────────
 let TARIF_CATALOGUE = [
   {nom:"Frais de déplacement", prix:50},
@@ -2943,15 +3013,24 @@ async function loadFactureHistory() {
     const rows = await sb("factures?select=*&order=created_at.desc&limit=50");
     if(!el) return;
     if(!rows.length) { el.innerHTML = '<div class="empty"><p>Aucune facture pour le moment.</p></div>'; return; }
-    el.innerHTML = rows.map(r=>`
+    const canManage = (role==="pdg"||role==="admin");
+    el.innerHTML = rows.map(r=>{
+      const tvaRecuperee = !!r.tva_recuperee;
+      return `
       <div class="log-item">
-        <div><div class="log-agent">${esc(r.numero)}${r.objet?" — "+esc(r.objet):""}</div><div class="log-dates">HT ${fmtEuro(r.total_ht)} · TVA ${fmtEuro(r.montant_tva)} · TTC ${fmtEuro(r.total_ttc)} · par ${esc(r.auteur||"—")}</div></div>
+        <div>
+          <div class="log-agent">${esc(r.numero)}${r.objet?" — "+esc(r.objet):""}</div>
+          <div class="log-dates">HT ${fmtEuro(r.total_ht)} · TVA ${fmtEuro(r.montant_tva)} · TTC ${fmtEuro(r.total_ttc)} · par ${esc(r.auteur||"—")}</div>
+          <span class="absence-statut" style="background:${tvaRecuperee?"#52D98B22":"#F0A84022"};color:${tvaRecuperee?"#52D98B":"#F0A840"};border:1px solid ${tvaRecuperee?"#52D98B55":"#F0A84055"};margin-top:5px;display:inline-block;">${tvaRecuperee?"✓ TVA récupérée":"TVA non récupérée"}</span>
+        </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          ${canManage?`<button class="btn btn-sm ${tvaRecuperee?"btn-ghost":"btn-success"}" onclick="toggleTvaRecuperee('${r.id}', ${!tvaRecuperee})">${tvaRecuperee?"↩️ Marquer non récupérée":"✓ TVA récupérée"}</button>`:""}
           <button class="btn btn-ghost btn-sm" onclick="chargerFacture('${r.id}')">📂 Charger</button>
           <button class="btn btn-primary btn-sm" onclick="reprintFacture('${r.id}')">👁 Revoir</button>
           <button class="btn btn-danger btn-sm" onclick="supprimerFacture('${r.id}')">🗑</button>
         </div>
-      </div>`).join("");
+      </div>`;
+    }).join("");
   } catch(e) { if(el) el.innerHTML = '<div class="empty"><p>Erreur de chargement.</p></div>'; }
 }
 async function chargerFacture(id) {
@@ -2991,6 +3070,15 @@ async function reprintFacture(id) {
     if(!d) return;
     const url = await renderFactureAsJPEG(d);
     showDocPreview(url, d.numero);
+  } catch(e) { toast("Erreur : "+e.message,"#E74C3C"); }
+}
+async function toggleTvaRecuperee(id, valeur) {
+  if(role!=="pdg" && role!=="admin") { toast("Réservé au PDG et à l'Admin.","#E74C3C"); return; }
+  try {
+    await sb(`factures?id=eq.${id}`,{method:"PATCH",body:JSON.stringify({tva_recuperee:valeur})});
+    logActivity("facture_tva", `TVA marquée ${valeur?"récupérée":"non récupérée"} pour une facture (par ${identityLabel()})`);
+    toast(valeur?"✓ TVA marquée récupérée":"✓ TVA marquée non récupérée");
+    loadFactureHistory();
   } catch(e) { toast("Erreur : "+e.message,"#E74C3C"); }
 }
 async function supprimerFacture(id) {
@@ -3275,6 +3363,7 @@ const NAV_CONFIG = [
   {page:"evaluations",      icon:"🎯", label:"Évaluations dépanneurs",    roles:["responsable","pdg","admin"],                 section:"Gestion", badgeId:"nav-badge-eval"},
   {page:"doc-rh",           icon:"🗂️", label:"Documents RH",          roles:["responsable","pdg","admin"],                 section:"Gestion"},
   {page:"devis",            icon:"🧾", label:"Devis clients",         roles:["pdg","admin"],                               section:"Gestion"},
+  {page:"dossiers-clients", icon:"🗃️", label:"Dossiers clients",      roles:["agent","responsable","pdg","admin"],         section:"Gestion"},
   {page:"effectifs",        icon:"👥", label:"Gestion des effectifs", roles:["responsable","pdg","admin"],                 section:"Gestion"},
   {page:"facturation",      icon:"💰", label:"Facturation",           roles:["agent","responsable","pdg","admin"],         section:"Gestion"},
   {page:"admin-comptes",    icon:"⚙️", label:"Gestion des comptes",   roles:["pdg","admin"],                       section:"Administration"},
@@ -3333,6 +3422,7 @@ function goPage(pageId) {
     if(cdgTab) cdgTab.style.display = isComiteDirection() ? "inline-flex" : "none";
   }
   if(pageId==="devis")             initDevisPage();
+  if(pageId==="dossiers-clients")  loadClientsList();
   if(pageId==="effectifs")         initEffectifsPage();
   if(pageId==="facturation")       initFacturationPage();
   if(pageId==="incident")          { prefillDocDates(); loadDocHistory("incident"); }
@@ -5861,7 +5951,7 @@ async function creerCompte() {
   try {
     const r = await fetch(SB_URL+"/rest/v1/agents_comptes",{
       method:"POST", headers:{...H,"Prefer":"return=minimal"}, mode:"cors",
-      body:JSON.stringify({prenom,nom,pin,role:role_c,statut_effectif:"Hors service"})
+      body:JSON.stringify({prenom,nom,pin,role:role_c,statut_effectif:"Hors Service"})
     });
     if(!r.ok) throw new Error(await r.text());
     toast("✓ Compte créé pour "+prenom+" "+nom);
