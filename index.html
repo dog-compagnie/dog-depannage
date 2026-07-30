@@ -3019,9 +3019,10 @@ async function apercuFacture() {
 async function loadFactureHistory() {
   const el = document.getElementById("fact-history");
   try {
-    const rows = await sb("factures?select=*&order=created_at.desc&limit=50");
+    const allRows = await sb("factures?select=*&order=created_at.desc&limit=50");
+    const rows = (allRows||[]).filter(r=>!r.tva_recuperee);
     if(!el) return;
-    if(!rows.length) { el.innerHTML = '<div class="empty"><p>Aucune facture pour le moment.</p></div>'; return; }
+    if(!rows.length) { el.innerHTML = '<div class="empty"><p>Aucune facture en attente (TVA non récupérée).</p></div>'; return; }
     const canManage = (role==="pdg"||role==="admin");
     el.innerHTML = rows.map(r=>{
       const tvaRecuperee = !!r.tva_recuperee;
