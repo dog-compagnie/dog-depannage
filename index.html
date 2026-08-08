@@ -2518,7 +2518,9 @@ async function loadClientsList() {
   } catch(e) { if(el) el.innerHTML = '<div class="empty"><p>Erreur de chargement.</p></div>'; }
 }
 
+let currentClientDossier = null;
 async function openClientDetail(prenom, nom) {
+  currentClientDossier = {prenom, nom};
   const el = document.getElementById("client-detail");
   if(!el) return;
   el.innerHTML = '<div class="empty"><p>Chargement…</p></div>';
@@ -2531,11 +2533,21 @@ async function openClientDetail(prenom, nom) {
     const passages = fid ? (fid.passages||0) : 0;
     const restants = Math.max(0, 10-passages);
     const eligible = passages>=10;
-    const facturesHtml = (factRows||[]).length ? factRows.map(f=>`
+    const facturesHtml = (factRows||[]).length ? factRows.map(f=>{
+      const tvaRecuperee = !!f.tva_recuperee;
+      return `
       <div class="log-item">
-        <div><div class="log-agent">${esc(f.numero)}</div><div class="log-dates">${fmtEuro(f.total_ttc)} TTC · ${f.date_facture?new Date(f.date_facture+"T12:00:00").toLocaleDateString("fr-FR"):""}${f.remise_fidelite?" · 🎉 remise":""}</div></div>
-        <button class="btn btn-primary btn-sm" onclick="reprintFacture('${f.id}')">👁 Revoir</button>
-      </div>`).join("") : '<div class="empty"><p>Aucune facturation enregistrée.</p></div>';
+        <div>
+          <div class="log-agent">${esc(f.numero)}</div>
+          <div class="log-dates">${fmtEuro(f.total_ttc)} TTC · ${f.date_facture?new Date(f.date_facture+"T12:00:00").toLocaleDateString("fr-FR"):""}${f.remise_fidelite?" · 🎉 remise":""}</div>
+          <span class="absence-statut" style="background:${tvaRecuperee?"#52D98B22":"#F0A84022"};color:${tvaRecuperee?"#52D98B":"#F0A840"};border:1px solid ${tvaRecuperee?"#52D98B55":"#F0A84055"};margin-top:5px;display:inline-block;">${tvaRecuperee?"✓ TVA récupérée":"TVA non récupérée"}</span>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          ${role==="admin"?`<button class="btn btn-ghost btn-sm" onclick="toggleTvaRecuperee('${f.id}', ${!tvaRecuperee})" title="Corriger en cas de mauvais clic">${tvaRecuperee?"↩️ Repasser en non récupérée":"✓ Marquer récupérée"}</button>`:""}
+          <button class="btn btn-primary btn-sm" onclick="reprintFacture('${f.id}')">👁 Revoir</button>
+        </div>
+      </div>`;
+    }).join("") : '<div class="empty"><p>Aucune facturation enregistrée.</p></div>';
     el.innerHTML = `
       <div style="margin-bottom:16px;">
         <div style="font-size:15px;font-weight:800;color:#fff;margin-bottom:8px;">${esc(prenom)} ${esc(nom)}</div>
@@ -2867,6 +2879,7 @@ async function updateFideliteApresFacture(prenom, nom) {
 async function sauvegarderFacture() {
   const data = collectFactureData();
   if(!(data.lignes||[]).some(l=>l.designation)) { toast("Merci d'ajouter au moins une prestation.","#E74C3C"); return; }
+  const isNewFacture = !currentFactureId;
   try {
     const payload = {...data, auteur: identityLabel()};
     let r;
@@ -2881,7 +2894,7 @@ async function sauvegarderFacture() {
       currentFactureId = created && created[0] && created[0].id;
     }
     logActivity("facture_enregistree", `Facture ${data.numero} enregistrée (HT ${fmtEuro(data.total_ht)} · TVA ${fmtEuro(data.montant_tva)} · TTC ${fmtEuro(data.total_ttc)})`);
-    if(data.client_prenom && data.client_nom) {
+    if(isNewFacture && data.client_prenom && data.client_nom) {
       await updateFideliteApresFacture(data.client_prenom, data.client_nom);
     }
     toast("✓ Facture enregistrée : "+data.numero);
@@ -3102,6 +3115,7 @@ async function toggleTvaRecuperee(id, valeur) {
     logActivity("facture_tva", `TVA marquée ${valeur?"récupérée":"non récupérée"} pour une facture (par ${identityLabel()})`);
     toast(valeur?"✓ TVA marquée récupérée":"✓ TVA marquée non récupérée");
     loadFactureHistory();
+    if(currentClientDossier) openClientDetail(currentClientDossier.prenom, currentClientDossier.nom);
   } catch(e) { toast("Erreur : "+e.message,"#E74C3C"); }
 }
 async function supprimerFacture(id) {
